@@ -1,0 +1,152 @@
+<html>
+<head>
+<style>
+html, body, #chart {
+  width: 100%;
+  height: 100%;
+  font-family: monospace;
+}
+.controls {
+  position: absolute;
+  top: 20px;
+  z-index: 2;
+  left: 50%;
+  transform: translate(-50%, 0%);
+}
+#slider {
+  width: 100%;
+}
+#chart {
+  z-index: 1;
+}
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <input
+    id="slider"
+    type="range"
+    min="0"
+    max="100"
+    step="10"
+    value="10"
+    tabindex="0"
+  >
+
+  <div id="curves-filter"></div>
+</div>
+
+<div id="chart"></div>
+
+<script src="https://www.gstatic.com/charts/loader.js"></script>
+<script>
+'use strict';
+
+
+var curves = {
+  'O(1)': function (n) { return 1; },
+  'O(log(n))': function (n) { return Math.log(n); },
+  'O(n)': function (n) { return n; },
+  'O(n*log(n))': function (n) { return n * Math.log(n); },
+  'O(n^2)': function (n) { return n * n; },
+  '2^n': function (n) { return Math.pow(2, n); }
+};
+
+
+var generateRawData = function (n, include) {
+
+  var rawData = [];
+
+  rawData.push(['n'].concat(include));
+
+  for (var i = 0; i <= n; i += 1) {
+    rawData.push([i].concat(include.map(function (key) {
+
+      return curves[key](i);
+    })));
+  }
+
+  return rawData;
+};
+
+
+var drawChart = function (n, include) {
+
+  var rawData = generateRawData(n, include);
+  var data = google.visualization.arrayToDataTable(rawData);
+
+  var options = {
+    title: 'Gráfica de complejidad Big-O',
+    curveType: 'function',
+    hAxis: {
+      title: 'Tamaño de entrada (n)'
+    },
+    vAxis: {
+      title: 'Operaciones'
+    },
+    legend: { position: 'right' }
+  };
+
+  var chart = new google.visualization.LineChart(document.getElementById('chart'));
+
+  chart.draw(data, options);
+};
+
+
+var init = function () {
+
+  var curveNames = Object.keys(curves);
+  var n = 10;
+  var include = curveNames.slice(0);
+  var curvesFilter = document.getElementById('curves-filter');
+  var slider = document.getElementById('slider');
+
+
+  slider.addEventListener('change', function (e) {
+
+    n = parseInt(e.target.value);
+    drawChart(n, include);
+  });
+
+
+  curvesFilter.innerHTML = curveNames.reduce(function (memo, name, i) {
+
+    return memo += [
+      '<label for="checkbox-', i, '">',
+      '<input type="checkbox" id="checkbox-', i, '" checked>',
+      '<span>', name, '</span>',
+      '</label>'
+    ].join('');
+  }, '');
+
+  var checkboxes = document.querySelectorAll('[type="checkbox"]');
+  var checkboxesChangeHandler = function (e) {
+
+    include = [].reduce.call(checkboxes, function (memo, checkbox) {
+
+      var idx = parseInt(checkbox.id.split('-')[1]);
+      var name = curveNames[idx];
+      if (checkbox.checked) {
+        memo.push(name);
+      }
+      return memo;
+    }, []);
+
+    drawChart(n, include);
+  };
+
+  [].forEach.call(checkboxes, function (checkbox) {
+
+    checkbox.addEventListener('change', checkboxesChangeHandler);
+  });
+
+  drawChart(n, include);
+};
+
+
+google.charts.load('current', {'packages':['corechart']});
+google.charts.setOnLoadCallback(init);
+</script>
+</body>
+</html>
